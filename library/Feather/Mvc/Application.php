@@ -117,7 +117,7 @@ class Application {
     public function run() {
         try {
             $response = $this->_dispatcher->run($this->_request, $this->_response);
-        } catch(Feature\Mvc\Exception $e) {
+        } catch(\Feather\Mvc\Exception $e) {
             $this->_response->setHttpCode($e->getCode());
             $this->_response->setBody($e->getMessage());
         } catch(\Exception $e) {
@@ -127,6 +127,21 @@ class Application {
 
         $this->_response->output();
         return;
+    }
+
+    /**
+    * get dispatcher
+    */
+    public function getDispatcher(){
+        return $this->_dispatcher;
+    }
+
+    public function getRequest(){
+        return $this->_request;
+    }
+
+    public function getResponse(){
+        return $this->_response;
     }
 
 }//END OF CLASS

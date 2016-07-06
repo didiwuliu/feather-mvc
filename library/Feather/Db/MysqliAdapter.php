@@ -39,7 +39,9 @@ class MysqliAdapter extends AbstractAdapter {
     }
 
     public function close() {
-        return $this->_connection->close();
+        $res = ($this->_connection) ? @mysqli_close($this->_connection) : true;
+        $this->_connection = $res ? null : $this->_connection;
+        return $res;
     }
 
     public function escape($str) {
@@ -47,16 +49,41 @@ class MysqliAdapter extends AbstractAdapter {
     }
 
     protected function _query($sql) {
+        $begin = microtime(true);
         $result = $this->_connection->query($sql);        
-
-        if ($result === true || $result === false) {
-            return $result;
+        $time = microtime(true) - $begin;
+        if($time >= (defined("SLOW_QUERY_TIME") ? constant("SLOW_QUERY_TIME") : 2)) {
+            $time = sprintf("%.3f", $time);
+            $dt = date("Y-m-d H:i:s", $begin);
+            $str = "====== $dt ======\n";
+            if(isset($_SERVER['HTTP_X_FROM_HOST'])) {
+                $str .= "FromHost: " . $_SERVER['HTTP_X_FROM_HOST'] . "\n";
+            }
+            if(isset($_SERVER['HTTP_X_FROM_URL'])) {
+                $str .= "FromUrl: " . $_SERVER['HTTP_X_FROM_URL'] . "\n";
+            }
+            $str .= "Spend: $time s\n";
+            $str .= "SQL: " . substr($sql, 0, 1024) . "\n";
+            foreach(debug_backtrace() as $k => $r) {
+                $str .= "$k: {$r['file']}:{$r['line']}\n";
+            }
+            $old = umask(0111);
+            @file_put_contents("/var/log/httpd/slow_query.log", $str, FILE_APPEND);
+            umask($old);
         }
-
+       
+        if($result === false){
+            return false;
+        }
+        
         if (parent::operationExtract($sql) == 'insert') {
             return $this->_connection->insert_id;
         }
-     
+
+        if ($result === true) {
+            return $result;
+        }
+
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
@@ -86,6 +113,7 @@ class MysqliAdapter extends AbstractAdapter {
         if (!$ret) {
             throw new Exception('Transaction commit failed');
         }
+        $this->_connection->autocommit(true);
     }
 
     public function rollback() {
@@ -93,5 +121,6 @@ class MysqliAdapter extends AbstractAdapter {
         if (!$ret) {
             throw new Exception('Transaction rollback failed');
         }
+        $this->_connection->autocommit(true);
     }
 }// END OF CLASS

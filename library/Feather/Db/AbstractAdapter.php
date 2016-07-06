@@ -40,7 +40,7 @@ abstract class AbstractAdapter {
     */
     public function query($sql) {
         $result = $this->_query($sql);
-        if ($result) {
+        if ($result !== false) {
             return $result;
         }
 
@@ -65,8 +65,11 @@ abstract class AbstractAdapter {
             if (empty($replacePos)) {
                 break;
             }
-
-            $finalSql .= substr($remain, 0, $replacePos)."'".$this->escape($p)."'";
+            if(is_numeric($p)){
+                $finalSql .= substr($remain, 0, $replacePos).$this->escape($p);
+            }else{
+                $finalSql .= substr($remain, 0, $replacePos)."'".$this->escape($p)."'";
+            }
             $remain =  substr($remain, $replacePos + 1);
             if (empty($remain)) {
                 break;

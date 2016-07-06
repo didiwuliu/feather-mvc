@@ -16,11 +16,11 @@ abstract class AbstractModel {
     }
 
     public function insert($data) {
-        $sql = 'insert into '.$this->_tableName.' set';
+        $sql = 'insert into `'.$this->_tableName.'` set';
         $params = array();
 
         foreach($data as $k => $v) {
-            $sql .= ' '.$k.' = ?,';
+            $sql .= ' `'.$k.'` = ?,';
             $params[] = $v;
         }
         $sql = rtrim($sql, ',');
@@ -28,14 +28,14 @@ abstract class AbstractModel {
     }
 
     public function deleteById($primaryId) {
-        $sql = 'delete from '.$this->_tableName.' where '.$this->_primaryKey.' = ?';
+        $sql = 'delete from `'.$this->_tableName.'` where '.$this->_primaryKey.' = ?';
         $params = array($primaryId);
 
         return $this->_adapter->secureQuery($sql, $params);
     }
 
     public function updateById($data, $primaryId) {
-        $sql = 'update '.$this->_tableName.' set';
+        $sql = 'update `'.$this->_tableName.'` set';
         $params = array();
 
         foreach($data as $k => $v) {
@@ -43,17 +43,28 @@ abstract class AbstractModel {
             $params[] = $v;
         }
         $sql = rtrim($sql, ',');
-        $sql .= 'where '.$this->_primaryKey.' = ?';
+        $sql .= ' where '.$this->_primaryKey.' = ?';
         $params[] = $primaryId;
 
         return $this->_adapter->secureQuery($sql, $params);
     }
 
     public function findById($primaryId) {
-        $sql = 'select * from '.$this->_tableName.' where '.$this->_primaryKey.' = ?';
+        $sql = 'select * from `'.$this->_tableName.'` where '.$this->_primaryKey.' = ?';
         $params = array($primaryId);
 
-        return $this->_adapter->secureQuery($sql, $params);
+        $result = $this->_adapter->secureQuery($sql, $params);
+        if(empty($result)){
+            return array();
+        }else{
+            return $result[0];
+        }
+    }
+
+    public function selectForUpdate($primaryIds){
+        $sql = 'select * from '.$this->_tableName.' where '.$this->_primaryKey.' in ('.$primaryIds.') for update';
+
+        return $this->_adapter->query($sql);
     }
 
 }// END OF CLASS
